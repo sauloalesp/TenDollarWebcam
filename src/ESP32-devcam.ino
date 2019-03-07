@@ -189,6 +189,36 @@ void setup()
 
     #ifdef WIFICLIENT_HARD_CODED
         lcdMessage(ssid);
+        
+        #ifdef FIXED_IP
+            String macAddress = WiFi.macAddress();
+
+            Serial.print("MAC address: ");
+            Serial.println(macAddress);
+
+            int numMacs     = sizeof(ipmacs) / sizeof(ipmacs[0]);
+            for (int m = 0; m < numMacs; ++m) {
+                IpMac currIpMAc = ipmacs[m];
+                Serial.print(F("Checking MAC address "));
+                Serial.print(m);
+                Serial.print(F(" / "));
+                Serial.println(numMacs);
+                Serial.print(F(": "));
+                Serial.println(currIpMAc.Mac);
+                if(macAddress == currIpMAc.Mac) {
+                    Serial.print(F("Setting fixed IP '"));
+                    Serial.print(currIpMAc.local_ip);
+                    Serial.print(F(" Gateway "));
+                    Serial.print(currIpMAc.gateway);
+                    Serial.print(F(" Subnet "));
+                    Serial.println(currIpMAc.subnet);
+
+                    WiFi.config(currIpMAc.local_ip, currIpMAc.gateway, currIpMAc.subnet);
+                    break;
+                }
+            }
+        #endif
+
         Serial.print(F("Connecting to WiFi '"));
         Serial.print(String(ssid));
         Serial.print("'...");
@@ -248,21 +278,9 @@ void setup()
 
     lcdMessage(ip.toString());
 
-    byte mac[6];
-
-    WiFi.macAddress(mac);
-    Serial.print("MAC: ");
-    Serial.print(mac[5],HEX);
-    Serial.print(":");
-    Serial.print(mac[4],HEX);
-    Serial.print(":");
-    Serial.print(mac[3],HEX);
-    Serial.print(":");
-    Serial.print(mac[2],HEX);
-    Serial.print(":");
-    Serial.print(mac[1],HEX);
-    Serial.print(":");
-    Serial.println(mac[0],HEX);
+    String macStr = WiFi.macAddress();
+    Serial.print("MAC address: ");
+    Serial.println(macStr);
 
 #ifdef ENABLE_WEBSERVER
     server.on("/", HTTP_GET, handle_jpg_stream);
