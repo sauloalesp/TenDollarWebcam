@@ -21,9 +21,13 @@
 #endif
 
 // #define SOFTAP_MODE // If you want to run our own softap turn this on
+#define WIFICLIENT_HARD_CODED // If you want to hard code you wifi credentials
 #define ENABLE_WEBSERVER
 #define ENABLE_RTSPSERVER
 
+#ifdef WIFICLIENT_HARD_CODED
+#include "wifikeys.h"
+#endif
 
 #ifndef USEBOARD_AITHINKER
 // If your board has a GPIO which is attached to a button, uncomment the following line
@@ -183,35 +187,82 @@ void setup()
     }
 #else
 
-    WiFi.mode(WIFI_STA);
+    #ifdef WIFICLIENT_HARD_CODED
+        lcdMessage(ssid);
+        Serial.print(F("Connecting to WiFi '"));
+        Serial.print(String(ssid));
+        Serial.print("'...");
 
+        WiFi.begin(ssid, password);
 
-    AutoWifi a;
+        int waitcount = 0;
+        while (WiFi.status() != WL_CONNECTED) {
+            delay(500);
+            Serial.print(".");
+            waitcount++;
+            if ( waitcount > 200 ) {
+                Serial.println("");
+                Serial.println("Restarting");
+                delay(500);
+                ESP.restart();
+            }
+        }
 
-    #ifdef FACTORYRESET_BUTTON
-    pinMode(FACTORYRESET_BUTTON, INPUT);
-    if(!digitalRead(FACTORYRESET_BUTTON))     // 1 means not pressed
-        a.resetProvisioning();
+        Serial.println("");
+        Serial.println(F("Connected to the WiFi network"));
+
+        ip = WiFi.localIP();
+        Serial.println(F("WiFi connected"));
+        Serial.println(ip);
+    #else
+        WiFi.mode(WIFI_AP_STA);
+
+        AutoWifi a;
+
+        #ifdef FACTORYRESET_BUTTON
+        pinMode(FACTORYRESET_BUTTON, INPUT);
+        if(!digitalRead(FACTORYRESET_BUTTON))     // 1 means not pressed
+            a.resetProvisioning();
+            lcdMessage("Reset");
+        #endif
+
+        if(!a.isProvisioned())
+            lcdMessage("Setup wifi!");
+            // lcdMessage(String("!join ") + a.getSSID());
+        else
+            lcdMessage(String("join ") + a.getSSID());
+
+        a.startWifi();
+
+        while (WiFi.status() != WL_CONNECTED)
+        {
+            delay(500);
+            Serial.print(F("."));
+        }
+        
+        ip = WiFi.localIP();
+        Serial.println(F("WiFi connected"));
+        Serial.println(ip);
     #endif
-
-    if(!a.isProvisioned())
-        lcdMessage("Setup wifi!");
-    else
-        lcdMessage(String("join ") + a.getSSID());
-
-    a.startWifi();
-
-    while (WiFi.status() != WL_CONNECTED)
-    {
-        delay(500);
-        Serial.print(F("."));
-    }
-    ip = WiFi.localIP();
-    Serial.println(F("WiFi connected"));
-    Serial.println(ip);
 #endif
 
     lcdMessage(ip.toString());
+
+    byte mac[6];
+
+    WiFi.macAddress(mac);
+    Serial.print("MAC: ");
+    Serial.print(mac[5],HEX);
+    Serial.print(":");
+    Serial.print(mac[4],HEX);
+    Serial.print(":");
+    Serial.print(mac[3],HEX);
+    Serial.print(":");
+    Serial.print(mac[2],HEX);
+    Serial.print(":");
+    Serial.print(mac[1],HEX);
+    Serial.print(":");
+    Serial.println(mac[0],HEX);
 
 #ifdef ENABLE_WEBSERVER
     server.on("/", HTTP_GET, handle_jpg_stream);

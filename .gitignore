@@ -1,2 +1,6 @@
 .pioenvs
 .piolibdeps
+.vscode
+
+qnap
+CP210x_Universal_Windows_Driver/
