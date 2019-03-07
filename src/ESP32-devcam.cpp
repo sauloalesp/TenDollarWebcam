@@ -15,12 +15,7 @@
 // This board has slightly different GPIO bindings (and lots more RAM)
 // uncomment to use
 // #define USEBOARD_TTGO_T
-
 // #define USEBOARD_AITHINKER
-
-#ifndef USEBOARD_AITHINKER
-#define ENABLE_OLED //if want use oled ,turn on thi macro
-#endif
 
 // #define SOFTAP_MODE // If you want to run our own softap turn this on
 #define WIFICLIENT_HARD_CODED // If you want to hard code you wifi credentials
@@ -28,99 +23,108 @@
 #define ENABLE_RTSPSERVER
 
 #ifdef WIFICLIENT_HARD_CODED
-#include "wifikeys.h"
+    #include "wifikeys.h"
 #endif
+
 
 #ifndef USEBOARD_AITHINKER
-// If your board has a GPIO which is attached to a button, uncomment the following line
-// and adjust the GPIO number as needed.  If that button is held down during boot the device
-// will factory reset.
-#define FACTORYRESET_BUTTON 32
+    #define ENABLE_OLED //if want use oled ,turn on thi macro
 #endif
+
+
+#ifndef USEBOARD_AITHINKER
+    // If your board has a GPIO which is attached to a button, uncomment the following line
+    // and adjust the GPIO number as needed.  If that button is held down during boot the device
+    // will factory reset.
+    #define FACTORYRESET_BUTTON 32
+#endif
+
 
 #ifdef ENABLE_OLED
-#include "SSD1306.h"
-#define OLED_ADDRESS 0x3c
+    #include "SSD1306.h"
+    #define OLED_ADDRESS 0x3c
 
-#ifdef USEBOARD_TTGO_T
-#define I2C_SDA 21
-#define I2C_SCL 22
-#else
-#define I2C_SDA 14
-#define I2C_SCL 13
-#endif
-SSD1306Wire display(OLED_ADDRESS, I2C_SDA, I2C_SCL, GEOMETRY_128_32);
-bool hasDisplay; // we probe for the device at runtime
+    #ifdef USEBOARD_TTGO_T
+        #define I2C_SDA 21
+        #define I2C_SCL 22
+    #else
+        #define I2C_SDA 14
+        #define I2C_SCL 13
+    #endif
+
+    SSD1306Wire display(OLED_ADDRESS, I2C_SDA, I2C_SCL, GEOMETRY_128_32);
+    bool hasDisplay; // we probe for the device at runtime
 #endif
 
 OV2640 cam;
 
 #ifdef ENABLE_WEBSERVER
-WebServer server(80);
+    WebServer server(80);
 #endif
 
 #ifdef ENABLE_RTSPSERVER
-WiFiServer rtspServer(8554);
+    WiFiServer rtspServer(8554);
 #endif
 
 
 #ifdef SOFTAP_MODE
-IPAddress apIP = IPAddress(192, 168, 1, 1);
-#else
+    IPAddress apIP = IPAddress(192, 168, 1, 1);
 #endif
 
 #ifdef ENABLE_WEBSERVER
-void handle_jpg_stream(void)
-{
-    WiFiClient client = server.client();
-    String response = "HTTP/1.1 200 OK\r\n";
-    response += "Content-Type: multipart/x-mixed-replace; boundary=frame\r\n\r\n";
-    server.sendContent(response);
-
-    while (1)
+    void handle_jpg_stream(void)
     {
-        cam.run();
-        if (!client.connected())
-            break;
-        response = "--frame\r\n";
-        response += "Content-Type: image/jpeg\r\n\r\n";
+        WiFiClient client = server.client();
+        String response = F("HTTP/1.1 200 OK\r\nContent-Type: multipart/x-mixed-replace; boundary=frame\r\n\r\n");
+        // String response = "HTTP/1.1 200 OK\r\n";
+        // response += "Content-Type: multipart/x-mixed-replace; boundary=frame\r\n\r\n";
         server.sendContent(response);
 
-        client.write((char *)cam.getfb(), cam.getSize());
-        server.sendContent("\r\n");
-        if (!client.connected())
-            break;
+        while (1)
+        {
+            cam.run();
+            if (!client.connected())
+                break;
+            response = "--frame\r\n";
+            response += "Content-Type: image/jpeg\r\n\r\n";
+            server.sendContent(response);
+
+            client.write((char *)cam.getfb(), cam.getSize());
+            server.sendContent("\r\n");
+            if (!client.connected())
+                break;
+        }
     }
-}
 
-void handle_jpg(void)
-{
-    WiFiClient client = server.client();
-
-    cam.run();
-    if (!client.connected())
+    void handle_jpg(void)
     {
-        return;
-    }
-    String response = "HTTP/1.1 200 OK\r\n";
-    response += "Content-disposition: inline; filename=capture.jpg\r\n";
-    response += "Content-type: image/jpeg\r\n\r\n";
-    server.sendContent(response);
-    client.write((char *)cam.getfb(), cam.getSize());
-}
+        WiFiClient client = server.client();
 
-void handleNotFound()
-{
-    String message = "Server is running!\n\n";
-    message += "URI: ";
-    message += server.uri();
-    message += "\nMethod: ";
-    message += (server.method() == HTTP_GET) ? "GET" : "POST";
-    message += "\nArguments: ";
-    message += server.args();
-    message += "\n";
-    server.send(200, "text/plain", message);
-}
+        cam.run();
+        if (!client.connected())
+        {
+            return;
+        }
+        String response = F("HTTP/1.1 200 OK\r\nContent-disposition: inline; filename=capture.jpg\r\nContent-type: image/jpeg\r\n\r\n");
+        // String response = "HTTP/1.1 200 OK\r\n";
+        // response += "Content-disposition: inline; filename=capture.jpg\r\n";
+        // response += "Content-type: image/jpeg\r\n\r\n";
+        server.sendContent(response);
+        client.write((char *)cam.getfb(), cam.getSize());
+    }
+
+    void handleNotFound()
+    {
+        String message = "Server is running!\n\n";
+        message += "URI: ";
+        message += server.uri();
+        message += "\nMethod: ";
+        message += (server.method() == HTTP_GET) ? "GET" : "POST";
+        message += "\nArguments: ";
+        message += server.args();
+        message += "\n";
+        server.send(200, "text/plain", message);
+    }
 #endif
 
 void lcdMessage(String msg)
@@ -188,7 +192,6 @@ void setup()
         ip = WiFi.softAPIP();
     }
 #else
-
     #ifdef WIFICLIENT_HARD_CODED
         lcdMessage(ssid);
         
@@ -253,10 +256,10 @@ void setup()
         AutoWifi a;
 
         #ifdef FACTORYRESET_BUTTON
-        pinMode(FACTORYRESET_BUTTON, INPUT);
-        if(!digitalRead(FACTORYRESET_BUTTON))     // 1 means not pressed
-            a.resetProvisioning();
-            lcdMessage("Reset");
+            pinMode(FACTORYRESET_BUTTON, INPUT);
+            if(!digitalRead(FACTORYRESET_BUTTON))     // 1 means not pressed
+                a.resetProvisioning();
+                lcdMessage("Reset");
         #endif
 
         if(!a.isProvisioned())
